@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#16120f">
+  <meta name="format-detection" content="telephone=no">
+  <title>Vintage Cam</title>
+  <link rel="stylesheet" href="css/app.css">
+  <script type="module" src="js/app.js"></script>
+</head>
+<body>
+  <div class="camera">
+    <header class="plate">
+      <div class="nameplate" aria-label="Film look: Super 8">
+        <span class="np-main">Super&nbsp;8</span>
+        <span class="np-sub" id="lookEra">1970s</span>
+      </div>
+      <button class="imprint" id="stampToggle" type="button" role="switch" aria-checked="true" aria-label="Date stamp">
+        <span class="led" aria-hidden="true"></span><span>Date</span>
+      </button>
+    </header>
+
+    <main class="finder">
+      <div class="finder-window" id="finderWindow">
+        <video id="cam" playsinline muted autoplay disablepictureinpicture></video>
+        <canvas id="out" aria-label="Viewfinder"></canvas>
+        <div class="flash" id="flash" aria-hidden="true"></div>
+        <div class="overlay" id="overlay" hidden>
+          <h2 id="overlayTitle"></h2>
+          <p id="overlayText"></p>
+          <button type="button" id="overlayBtn" class="btn primary"></button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="deck">
+      <button class="thumb" id="thumb" type="button" aria-label="No photos yet" disabled>
+        <span class="thumb-count" id="thumbCount" hidden></span>
+      </button>
+      <button class="shutter" id="shutter" type="button" aria-label="Take photo" disabled><span></span></button>
+      <button class="flip" id="flip" type="button" aria-label="Switch between back and front camera" disabled>
+        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7"/><path d="M20 4v4.7h-4.7"/>
+          <path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3"/><path d="M4 20v-4.7h4.7"/>
+        </svg>
+      </button>
+    </footer>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+  </div>
+
+  <section class="review" id="review" hidden aria-label="Review photos">
+    <header class="review-bar">
+      <button type="button" class="btn ghost" id="reviewClose">Done</button>
+      <span id="reviewCount"></span>
+      <button type="button" class="btn ghost danger" id="reviewDelete">Delete</button>
+    </header>
+    <div class="review-media">
+      <img id="reviewImg" alt="">
+      <button type="button" class="nav prev" id="reviewPrev" aria-label="Previous photo">‹</button>
+      <button type="button" class="nav next" id="reviewNext" aria-label="Next photo">›</button>
+    </div>
+    <div class="review-info">
+      <p class="meta" id="reviewMeta"></p>
+      <p class="save-state" id="reviewStatus" role="status" aria-live="polite"></p>
+      <div class="review-actions">
+        <button type="button" class="btn primary" id="saveBtn">Save / Share</button>
+        <button type="button" class="btn" id="downloadBtn">Download</button>
+      </div>
+      <button type="button" class="btn" id="saveAllBtn" hidden></button>
+      <p class="hint" id="reviewHint"></p>
+    </div>
+  </section>
+</body>
+</html>
