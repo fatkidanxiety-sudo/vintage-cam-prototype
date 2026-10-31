@@ -45,7 +45,10 @@
         <div class="flash" id="flash" aria-hidden="true"></div>
         <span class="compare-tag" id="compareTag" hidden>Original</span>
         <span class="timer" id="recTimer" hidden>0:00:00</span>
-        <button class="quick" id="quick" type="button" hidden aria-label="Open the photo you just took"><img alt=""></button>
+        <div class="quick" id="quick" hidden>
+          <button type="button" class="quick-open" id="quickOpen" aria-label="Open what you just captured"><img alt=""></button>
+          <button type="button" class="quick-save" id="quickSave">Save</button>
+        </div>
         <div class="overlay" id="overlay" hidden>
           <h2 id="overlayTitle"></h2>
           <p id="overlayText"></p>

@@ -245,17 +245,39 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px s
   left: 10px;
   bottom: 10px;
   z-index: 1;
-  width: 28%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 30%;
+  animation: quick-in 0.25s ease-out;
+}
+
+.quick-open {
   aspect-ratio: var(--ar, 3 / 4);
   padding: 0;
   border: 2px solid #f1eee6;
   border-radius: 3px;
   background: #000;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
-  animation: quick-in 0.25s ease-out;
 }
 
-.quick img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.quick-open img { display: block; width: 100%; height: 100%; object-fit: cover; }
+
+.quick-save {
+  min-height: 40px;
+  border: 0;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #1b1b1c;
+  background: linear-gradient(180deg, #f4b864, var(--amber));
+  box-shadow: 0 2px 0 #6a4415, 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
+.quick-save:active { transform: translateY(2px); box-shadow: 0 0 0 #6a4415; }
+.quick-save[data-done="true"] { color: var(--text); background: #2a3a2d; box-shadow: none; }
 
 @keyframes quick-in {
   from { transform: scale(0.8); opacity: 0; }

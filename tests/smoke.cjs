@@ -194,7 +194,7 @@ async function record(page, seconds) {
     await page.click('#shutter');
     await page.waitForFunction(() => window.__cam.state.captures.length === 1);
     check('photo shows an immediate preview', await page.waitForSelector('#quick:not([hidden])', { timeout: 3000 }).then(() => true, () => false));
-    await page.$eval('#quick', (b) => b.click());
+    await page.$eval('#quickOpen', (b) => b.click());
     await page.waitForSelector('#review:not([hidden])');
     await page.click('#reviewClose');
     const cap = await page.evaluate(() => { const c = window.__cam.state.captures[0]; return { kind: c.kind, type: c.blob.type, size: c.blob.size, w: c.width, h: c.height }; });
@@ -307,6 +307,46 @@ async function record(page, seconds) {
     check(`${fmt}: blinking REC indicator is burned into the video`, swing > 300, `red pixels per frame range ${Math.min(...reds)}–${Math.max(...reds)}`);
     await page.screenshot({ path: path.join(OUT, `8-review-video-${fmt}.png`) });
     check(`${fmt}: no page errors`, errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
+  // ---------- 4b. Save sheet opens right after capture (iOS share sheet stubbed) ----------
+  {
+    const stub = () => {
+      window.__shares = [];
+      window.__shareMode = 'ok';
+      navigator.canShare = () => true;
+      navigator.share = (data) => {
+        window.__shares.push(data.files.map((f) => `${f.type}|${f.name}|${f.size}`));
+        if (window.__shareMode === 'deny') return Promise.reject(new DOMException('no activation', 'NotAllowedError'));
+        return Promise.resolve();
+      };
+    };
+    const { ctx, page, errors } = await open({ prefs: { quality: '720', videoFormat: 'webm' }, init: stub });
+    await ready(page);
+    await page.click('#shutter');
+    await page.waitForFunction(() => window.__shares.length === 1, null, { timeout: 10000 });
+    const r = await page.evaluate(() => ({ shares: window.__shares, shared: window.__cam.state.captures.at(-1).shared, badge: document.querySelector('#thumbCount').hidden }));
+    check('auto-save: Save sheet opens right after a photo with the JPEG', r.shares[0][0].startsWith('image/jpeg|vintage-') && r.shared && r.badge, JSON.stringify(r.shares));
+
+    await page.evaluate(() => { window.__shareMode = 'deny'; });
+    await page.click('#shutter');
+    await page.waitForFunction(() => window.__shares.length === 2, null, { timeout: 10000 });
+    await page.waitForSelector('#quickSave:not([hidden])', { timeout: 5000 });
+    const label = await page.textContent('#quickSave');
+    await page.evaluate(() => { window.__shareMode = 'ok'; });
+    await page.click('#quickSave');
+    await page.waitForFunction(() => window.__shares.length === 3 && window.__cam.state.captures.at(-1).shared, null, { timeout: 5000 });
+    check('auto-save refused by iOS: one-tap SAVE on the preview works', label === 'Save', `button said "${label}"`);
+
+    await page.click('.mode [data-mode="video"]');
+    await page.waitForFunction(() => !!window.__cam.mic.track, null, { timeout: 10000 });
+    await record(page, 2);
+    await page.click('#shutter');
+    await page.waitForFunction(() => window.__shares.length === 4, null, { timeout: 15000 });
+    const v = await page.evaluate(() => window.__shares[3][0]);
+    check('auto-save: Save sheet opens right after a video with the video file', /^video\/webm.*\|vintage-.*\.webm\|\d+$/.test(v), v);
+    check('no page errors (auto-save)', errors.length === 0, errors.join(' | '));
     await ctx.close();
   }
 

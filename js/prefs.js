@@ -17,6 +17,7 @@ export function defaultPrefs() {
     aspect: '4:3',
     videoFormat: 'auto',
     sounds: true,
+    autoSave: true,        // open the iOS Save sheet right after each capture
     looksVersion: LOOKS_VERSION,
   };
 }

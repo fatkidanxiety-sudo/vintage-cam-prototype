@@ -49,6 +49,10 @@ export function schema(support) {
     { title: 'Sound', items: [
       { path: 'sounds', type: 'toggle', label: 'Button clicks (follows the silent switch)' },
     ] },
+    { title: 'Saving', items: [
+      { path: 'autoSave', type: 'toggle', label: 'Open the Save sheet after each capture' },
+      { type: 'note', text: 'Web apps can’t put files in your camera roll silently. iOS needs one tap: choose Save Image or Save Video in the sheet. If the sheet doesn’t open by itself, tap SAVE on the preview.' },
+    ] },
     { title: 'Storage', items: [
       { type: 'info', id: 'storage' },
       { type: 'action', id: 'openGallery', label: 'Open gallery' },

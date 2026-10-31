@@ -8,7 +8,7 @@ import { sound } from './sound.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { buildSettings } from './settings.js';
 
-const VERSION = '0.3.0';
+const VERSION = '0.3.1';
 const MAX_LONG = { 720: 1280, 1080: 1920, '4k': 2880 };
 const MAX_RECORD_SECONDS = 15 * 60;
 const MIN_FREE_BYTES = 80e6;
@@ -16,7 +16,7 @@ const MIN_FREE_BYTES = 80e6;
 const $ = (id) => document.getElementById(id);
 const els = {
   video: $('cam'), out: $('out'), finderWindow: $('finderWindow'), flash: $('flash'),
-  compareTag: $('compareTag'), recTimer: $('recTimer'), quick: $('quick'),
+  compareTag: $('compareTag'), recTimer: $('recTimer'), quick: $('quick'), quickOpen: $('quickOpen'), quickSave: $('quickSave'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayText: $('overlayText'), overlayBtn: $('overlayBtn'),
   powerLamp: $('powerLamp'), recLamp: $('recLamp'), lcdProfile: $('lcdProfile'), lcdMode: $('lcdMode'),
   stampToggle: $('stampToggle'), modeButtons: [...document.querySelectorAll('.mode [data-mode]')], menuBtn: $('menuBtn'),
@@ -340,11 +340,13 @@ async function takePhoto() {
     const blob = await renderer.toBlob('image/jpeg', 0.93);
     if (!blob || !blob.size) throw new Error('encode failed');
     shutterBlink();
-    await addCapture({
+    const c = {
       id: newId(), kind: 'photo', blob, thumb: null, takenAt: takenAt.getTime(), zone: zoneLabel(takenAt),
       width: renderer.W, height: renderer.H, mime: 'image/jpeg', shared: false, downloaded: false,
-    });
-    showQuick(state.captures.at(-1));
+    };
+    const stored = addCapture(c);
+    offerSave(c); // as soon as possible, while iOS still counts the shutter tap
+    await stored;
   } catch (err) {
     console.error(err);
     toast('Couldn’t make that photo. The phone may be short on memory: close other apps and try again.', 5000);
@@ -360,17 +362,76 @@ function shutterBlink() {
 }
 
 let quickTimer = 0;
-function showQuick(c) {
+let quickCapture = null;
+function showQuick(c, ms = 3500) {
   if (!c) return;
+  quickCapture = c;
   els.quick.querySelector('img').src = urlFor(c, 'thumb');
+  els.quickSave.hidden = !(canShareFiles([fileFor(c)]) || !isStandalone());
+  updateQuickSave();
   els.quick.hidden = false;
   clearTimeout(quickTimer);
-  quickTimer = setTimeout(() => { els.quick.hidden = true; }, 3500);
+  quickTimer = setTimeout(() => { els.quick.hidden = true; }, ms);
 }
-els.quick.addEventListener('click', () => {
+
+function updateQuickSave() {
+  const done = !!quickCapture && (quickCapture.shared || quickCapture.downloaded);
+  els.quickSave.dataset.done = String(done);
+  els.quickSave.textContent = done ? 'Sent' : 'Save';
+}
+
+els.quickOpen.addEventListener('click', () => {
   els.quick.hidden = true;
-  openReview(state.captures.length - 1);
+  openReview(state.captures.indexOf(quickCapture));
 });
+
+// One tap from the preview to the iOS Save sheet (or a download in a Safari tab).
+els.quickSave.addEventListener('click', () => {
+  const c = quickCapture;
+  if (!c) return;
+  clearTimeout(quickTimer);
+  if (canShareFiles([fileFor(c)])) {
+    shareFiles([fileFor(c)]).then(() => markShared(c), (err) => {
+      if (err?.name !== 'AbortError') toast(`Sharing didn’t work (${err?.name || err}). Open the photo and try again.`, 5000);
+    }).finally(() => { quickTimer = setTimeout(() => { els.quick.hidden = true; }, 2500); });
+  } else {
+    downloadFile(fileFor(c));
+    c.downloaded = true;
+    saveFlags(c);
+    updateQuickSave();
+    updateThumb();
+    toast('Downloaded to the Files app (Downloads). From there, Share → Save to Photos.', 5000);
+  }
+});
+
+function markShared(c) {
+  c.shared = true;
+  saveFlags(c);
+  updateQuickSave();
+  updateThumb();
+  if (!els.review.hidden) renderReview();
+  toast(`Done. If you chose ${c.kind === 'video' ? 'Save Video' : 'Save Image'}, it’s in Photos.`, 3500);
+}
+
+// Right after a capture, open the iOS Save sheet if the setting is on. iOS may refuse
+// because the tap was too long ago (slow encoding); then the preview's SAVE button is
+// one tap away. Nothing is ever saved without the user choosing Save in the sheet.
+function offerSave(c, { fallback = 'quick' } = {}) {
+  const showFallback = (ms) => (fallback === 'review' ? openReview(state.captures.indexOf(c)) : showQuick(c, ms));
+  if (!prefs.autoSave || !canShareFiles([fileFor(c)])) return showFallback();
+  let p;
+  try {
+    p = shareFiles([fileFor(c)]);
+  } catch (err) {
+    p = Promise.reject(err);
+  }
+  showQuick(c, 8000);
+  p.then(() => markShared(c), (err) => {
+    if (err?.name === 'AbortError') return;
+    toast(`Tap SAVE to put it in Photos.`, 4000);
+    showFallback(8000);
+  });
+}
 
 // ---------- Video ----------
 
@@ -485,8 +546,10 @@ async function stopRecording(reason = 'user') {
   }
   addCapture(capture, { stored: true });
   sound.play('rec');
-  if (reason === 'user') openReview(state.captures.length - 1);
-  else toast(STOP_MESSAGES[reason] || 'Recording stopped. The clip was kept.', 6000);
+  if (reason === 'user') {
+    if (prefs.autoSave) offerSave(capture, { fallback: 'review' });
+    else openReview(state.captures.length - 1);
+  } else toast(STOP_MESSAGES[reason] || 'Recording stopped. The clip was kept.', 6000);
 }
 
 async function keepAwake(on) {

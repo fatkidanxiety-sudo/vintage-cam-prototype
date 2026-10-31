@@ -2,7 +2,7 @@
 // Photos and videos never pass through here; they stay in the app's own storage.
 // Bump VERSION with every release so phones pick up the new files.
 
-const VERSION = 'vintage-cam-0.3.0';
+const VERSION = 'vintage-cam-0.3.1';
 const SHELL = [
   './',
   './index.html',
