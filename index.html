@@ -4,29 +4,48 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#16120f">
+  <meta name="theme-color" content="#121212">
   <meta name="format-detection" content="telephone=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Vintage Cam">
   <title>Vintage Cam</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="icon" href="icons/icon-192.png">
   <link rel="stylesheet" href="css/app.css">
   <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <div class="camera">
-    <header class="plate">
-      <div class="nameplate" aria-label="Film look: Super 8">
-        <span class="np-main">Super&nbsp;8</span>
-        <span class="np-sub" id="lookEra">1970s</span>
+  <div class="cam">
+    <header class="housing top">
+      <div class="lamp-group">
+        <span class="lamp power" id="powerLamp" aria-hidden="true"></span>
+        <span class="engrave">Power</span>
       </div>
-      <button class="imprint" id="stampToggle" type="button" role="switch" aria-checked="true" aria-label="Date stamp">
-        <span class="led" aria-hidden="true"></span><span>Date</span>
+      <div class="lcd" aria-label="Camera status">
+        <span id="lcdProfile">HOME MOVIE</span>
+        <span class="lcd-mode" id="lcdMode">PHOTO</span>
+      </div>
+      <div class="lamp-group">
+        <span class="lamp rec" id="recLamp" aria-hidden="true"></span>
+        <span class="engrave">Rec</span>
+      </div>
+      <button class="toggle" id="stampToggle" type="button" role="switch" aria-checked="true" aria-label="Date and time stamp">
+        <span class="engrave">Date</span>
+        <span class="toggle-track" aria-hidden="true"><span class="toggle-knob"></span></span>
       </button>
     </header>
 
     <main class="finder">
       <div class="finder-window" id="finderWindow">
         <video id="cam" playsinline muted autoplay disablepictureinpicture></video>
-        <canvas id="out" aria-label="Viewfinder"></canvas>
+        <canvas id="out" aria-label="Viewfinder. Press and hold to compare with the original image."></canvas>
         <div class="flash" id="flash" aria-hidden="true"></div>
+        <span class="compare-tag" id="compareTag" hidden>Original</span>
+        <span class="timer" id="recTimer" hidden>0:00:00</span>
+        <button class="quick" id="quick" type="button" hidden aria-label="Open the photo you just took"><img alt=""></button>
         <div class="overlay" id="overlay" hidden>
           <h2 id="overlayTitle"></h2>
           <p id="overlayText"></p>
@@ -35,31 +54,44 @@
       </div>
     </main>
 
-    <footer class="deck">
-      <button class="thumb" id="thumb" type="button" aria-label="No photos yet" disabled>
-        <span class="thumb-count" id="thumbCount" hidden></span>
-      </button>
-      <button class="shutter" id="shutter" type="button" aria-label="Take photo" disabled><span></span></button>
-      <button class="flip" id="flip" type="button" aria-label="Switch between back and front camera" disabled>
-        <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7"/><path d="M20 4v4.7h-4.7"/>
-          <path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3"/><path d="M4 20v-4.7h4.7"/>
-        </svg>
-      </button>
+    <footer class="housing panel">
+      <div class="panel-row">
+        <div class="mode" role="radiogroup" aria-label="Capture mode">
+          <button type="button" role="radio" data-mode="photo" aria-checked="true">Photo</button>
+          <button type="button" role="radio" data-mode="video" aria-checked="false">Video</button>
+        </div>
+        <span class="brand">Vintage Cam</span>
+        <button class="key" id="menuBtn" type="button">Menu</button>
+      </div>
+      <div class="panel-row controls">
+        <button class="thumb" id="thumb" type="button" aria-label="No photos or videos yet" disabled>
+          <span class="thumb-count" id="thumbCount" hidden></span>
+        </button>
+        <button class="trigger" id="shutter" type="button" aria-label="Take photo" disabled>
+          <span class="trigger-cap"></span>
+        </button>
+        <button class="key round" id="flip" type="button" aria-label="Switch between back and front camera" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12a8 8 0 0 1 13.7-5.6L20 8.7"/><path d="M20 4v4.7h-4.7"/>
+            <path d="M20 12a8 8 0 0 1-13.7 5.6L4 15.3"/><path d="M4 20v-4.7h4.7"/>
+          </svg>
+        </button>
+      </div>
     </footer>
     <p class="toast" id="toast" role="status" aria-live="polite"></p>
   </div>
 
-  <section class="review" id="review" hidden aria-label="Review photos">
+  <section class="review" id="review" hidden aria-label="Gallery">
     <header class="review-bar">
       <button type="button" class="btn ghost" id="reviewClose">Done</button>
       <span id="reviewCount"></span>
       <button type="button" class="btn ghost danger" id="reviewDelete">Delete</button>
     </header>
     <div class="review-media">
-      <img id="reviewImg" alt="">
-      <button type="button" class="nav prev" id="reviewPrev" aria-label="Previous photo">‹</button>
-      <button type="button" class="nav next" id="reviewNext" aria-label="Next photo">›</button>
+      <img id="reviewImg" alt="" hidden>
+      <video id="reviewVideo" controls playsinline preload="metadata" hidden></video>
+      <button type="button" class="nav prev" id="reviewPrev" aria-label="Previous">‹</button>
+      <button type="button" class="nav next" id="reviewNext" aria-label="Next">›</button>
     </div>
     <div class="review-info">
       <p class="meta" id="reviewMeta"></p>
@@ -71,6 +103,14 @@
       <button type="button" class="btn" id="saveAllBtn" hidden></button>
       <p class="hint" id="reviewHint"></p>
     </div>
+  </section>
+
+  <section class="sheet" id="settings" hidden aria-label="Menu">
+    <header class="sheet-bar">
+      <span class="engrave">Menu</span>
+      <button type="button" class="btn ghost" id="settingsClose">Done</button>
+    </header>
+    <div class="sheet-body" id="settingsBody"></div>
   </section>
 </body>
 </html>

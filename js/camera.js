@@ -8,6 +8,44 @@ export class CameraError extends Error {
   }
 }
 
+// Requested camera stream size. iOS picks the closest mode it supports.
+export const QUALITY = { 720: [1280, 720], 1080: [1920, 1080], '4k': [3840, 2160] };
+
+// Microphone for video mode, kept separate from the camera stream so switching
+// cameras doesn't interrupt it.
+export class Mic {
+  constructor() {
+    this.stream = null;
+    this.denied = false;
+  }
+
+  get track() {
+    const t = this.stream?.getAudioTracks()[0];
+    return t && t.readyState === 'live' ? t : null;
+  }
+
+  async open() {
+    if (this.track) return this.track;
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: true },
+        video: false,
+      });
+      this.denied = false;
+      return this.track;
+    } catch (err) {
+      this.denied = err.name === 'NotAllowedError' || err.name === 'SecurityError';
+      this.error = err;
+      return null;
+    }
+  }
+
+  close() {
+    if (this.stream) for (const t of this.stream.getTracks()) t.stop();
+    this.stream = null;
+  }
+}
+
 export class Camera {
   constructor(video) {
     this.video = video;
@@ -25,15 +63,16 @@ export class Camera {
     return this.track?.readyState === 'live';
   }
 
-  async start(facing = this.facing) {
+  async start(facing = this.facing, quality = '1080') {
     if (!window.isSecureContext) throw new CameraError('InsecureContext', 'The camera needs an https:// page.');
     if (!navigator.mediaDevices?.getUserMedia) throw new CameraError('Unsupported', 'This browser has no camera access (getUserMedia).');
 
     this.stop(); // the iPhone only runs one camera at a time
+    const [w, h] = QUALITY[quality] || QUALITY['1080'];
     const ideal = {
       facingMode: { ideal: facing },
-      width: { ideal: 1920 },
-      height: { ideal: 1080 },
+      width: { ideal: w },
+      height: { ideal: h },
       frameRate: { ideal: 30 },
     };
     let stream;

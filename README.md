@@ -1,57 +1,67 @@
 # vintage-cam-prototype
 
-Temporary working name. A free, on-device vintage film camera for iPhone, built as a
-plain web app (no build step, no dependencies, no server code).
+Temporary working name. A free, on-device 1980s camcorder for iPhone, built as a plain
+web app (no build step, no dependencies, no server code, no analytics).
 
-- Takes real photos with your iPhone's camera through `getUserMedia`.
-- Applies the film look in WebGL and bakes it, plus the optional orange date stamp, into the saved file.
-- Never uploads anything. Photos stay in the app's memory until you save or share them.
+- Real photos and videos from the iPhone camera and microphone (`getUserMedia`).
+- Film/video looks rendered in WebGL and burned into the saved files, together with the
+  dot-matrix date/time stamp and blinking REC indicator.
+- Nothing is uploaded. Captures stay in the app's on-device storage until you save or share them.
 
-## Status
+## Profiles
 
-| Phase | Scope | State |
+| Profile | Character | Defaults |
 | --- | --- | --- |
-| 1 | Camera preview, Super 8 look, live date/time, photo capture and export | Built, tested in desktop Chromium only |
-| 2 | Video with microphone, effects and timestamp baked into the recording | Not started |
-| 3 | Faded Home Movie and VHS looks, settings, offline PWA | Not started |
+| Home Movie (default) | 1980s camcorder: natural colour, fine video noise, slight chroma bleed | warmth 8, grain 22, saturation 88%, softness 12, vignette 14, tracking 3, leaks off, scratches off |
+| Super 8 | 1970s film: clumpy grain, gate weave, flicker, rounded gate, occasional leaks/scratches | warmth 16, grain 40, saturation 84%, softness 24, vignette 32 |
+| VHS | late-80s tape: smeared, misregistered colour, tracking wobble, head-switching noise | warmth 4, grain 30, saturation 80%, softness 36, tracking 22 |
+
+All sliders are in MENU and saved per profile. Press and hold the viewfinder to compare with
+the original camera image.
 
 ## Files
 
 ```
-index.html        page and controls
-css/app.css       camera-body styling, portrait and landscape
-js/app.js         UI, camera lifecycle, capture, review and save
-js/camera.js      getUserMedia start/stop and interruption events
-js/renderer.js    WebGL film shader, 2D fallback, 4:3 crop
-js/looks.js       film look settings
-js/stamp.js       seven-segment date imprint (no font files)
-js/share.js       share sheet and download helpers
-tests/smoke.cjs   headless Chromium smoke test with a fake camera
+index.html             camcorder layout
+css/app.css            styling, portrait and landscape
+js/app.js              UI, camera lifecycle, photo/video capture, gallery, settings wiring
+js/camera.js           camera and microphone streams
+js/renderer.js         WebGL shader, 2D fallback, crop/aspect, raw compare
+js/looks.js            the three profiles and slider → shader mapping
+js/overlay.js          dot-matrix date/time stamp and REC indicator (canvas, no fonts)
+js/recorder.js         MediaRecorder on the canvas + mic, format selection
+js/db.js               on-device gallery (IndexedDB), crash-safe recording chunks
+js/settings.js         MENU sheet
+js/prefs.js            saved preferences
+js/share.js            share sheet / download helpers
+js/sound.js            synthesised button clicks
+sw.js, manifest.webmanifest, icons/   offline Home Screen app
+tests/smoke.cjs        end-to-end checks in headless Chromium
 ```
 
-## Running it
+## Running and testing
 
-The camera only works over `https://` (or `http://localhost`). Any static host works:
-GitHub Pages, Cloudflare Pages, Netlify. Locally:
+Needs `https://` (or `http://localhost`). Any static host works; the live copy is GitHub Pages
+from `main`.
 
 ```
 python3 -m http.server 8123
-FAKE_VIDEO=scene.y4m node tests/smoke.cjs     # optional fake camera feed
+CHECKER=checker.y4m CHECKER_JSON=checker.json SCENE=scene.y4m OUT=/tmp/out node tests/smoke.cjs
 ```
 
-## Saving photos on iPhone
+The tests use Chromium with fake camera/mic feeds. They prove the app's logic, not iPhone
+Safari behaviour.
 
-1. **Save / Share** opens the iOS share sheet. Choose **Save Image** to put the photo in Photos.
-2. If Save Image isn't listed (reported on some iOS versions), press and hold the photo in the
-   review screen and choose **Save to Photos**.
-3. **Download** (Safari tab only) saves to Files › Downloads, not Photos.
+## Saving on iPhone
 
-The app never says a photo is in Photos. It can only tell that the share sheet finished,
-not which option you picked.
+- **Save / Share** opens the iOS share sheet: choose **Save Image** / **Save Video** for Photos.
+- If Save Image is missing, press and hold the photo and choose **Save to Photos**.
+- **Download** (Safari tab only) goes to Files › Downloads, not Photos.
+- The app never says something is in Photos; it can only tell the share sheet finished.
 
-## Known limits (iPhone)
+## Known limits
 
-- Photo resolution follows the live camera stream (about 1080×1440), not the 12–48 MP camera.
-- Photos have no EXIF date, so Photos files them by the date you save them.
-- Unsaved photos are lost if iOS closes the app. Save as you go.
-- If your phone changes time zone while the app is open, close and reopen the app.
+- Photo resolution follows the live stream (1080p: 1440×1080; 4K setting: up to 2880×2160), not the 12–48 MP camera.
+- No EXIF date in files, so Photos files them by the day you save them.
+- Video is recorded from the canvas at 24–30 fps; iOS MP4 recording has reported bugs (see report).
+- Recordings stop when the app leaves the screen; the clip is kept. Max 15 minutes per clip.
