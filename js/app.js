@@ -8,7 +8,7 @@ import { sound } from './sound.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { buildSettings } from './settings.js';
 
-const VERSION = '0.2.0';
+const VERSION = '0.3.0';
 const MAX_LONG = { 720: 1280, 1080: 1920, '4k': 2880 };
 const MAX_RECORD_SECONDS = 15 * 60;
 const MIN_FREE_BYTES = 80e6;

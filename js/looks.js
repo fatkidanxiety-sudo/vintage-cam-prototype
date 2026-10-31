@@ -1,8 +1,13 @@
 // Film profiles. Each profile has:
-//   adjust: the user-facing settings (0–100 sliders, saturation in %), editable in MENU
+//   adjust: the user-facing settings (sliders, saturation in %, warmth −100…100), editable in MENU
 //   base:   fixed character of the profile (curves, chroma, motion) that the sliders sit on
-// toUniforms() turns both into shader values. The grade starts neutral: the vintage feel
-// comes from texture, softness, roll-off and small imperfections, not from a colour cast.
+// toUniforms() turns both into shader values.
+// Home Movie is matched to real 1980s camcorder footage: cool white balance, lifted
+// blue-grey shadows, low tape resolution (softer sideways than vertically), cool
+// bloom on whites and colour bleeding past edges.
+
+// Bump when profile defaults change so phones drop the old saved slider values.
+export const LOOKS_VERSION = 2;
 
 export const ADJUST_KEYS = ['warmth', 'grain', 'saturation', 'softness', 'vignette', 'tracking', 'leaks', 'scratches'];
 
@@ -13,16 +18,18 @@ export const PROFILES = {
     lcd: 'HOME MOVIE',
     era: '1980s camcorder',
     fps: 30,
-    adjust: { warmth: 8, grain: 22, saturation: 88, softness: 12, vignette: 14, tracking: 3, leaks: false, scratches: false },
+    adjust: { warmth: -50, grain: 20, saturation: 98, softness: 68, vignette: 10, tracking: 5, leaks: false, scratches: false },
     base: {
-      black: [0.032, 0.03, 0.034],  // shadows lifted only slightly: still rich
-      white: [0.99, 0.988, 0.982],  // whites stay white
-      knee: 0.72, shoulder: 0.12,   // gentle highlight roll-off
-      contrast: 0.12,
-      halation: 0.05,
-      grainClump: 0.15,             // video noise: mostly fine, per pixel
-      chromaNoise: 0.45,
-      chromaShift: 0.6, chromaBleed: 1.6,
+      black: [0.085, 0.095, 0.125], // lifted, bluish shadows (measured ~93,104,127 in the reference)
+      white: [0.94, 0.93, 1.0],     // whites lean lavender/blue
+      knee: 0.68, shoulder: 0.28,   // soft, glowing highlight roll-off
+      contrast: 0,
+      halation: 0.14,               // cool bloom around whites
+      halationColor: [0.9, 0.95, 1.0],
+      softV: 0.45,                  // tape loses more detail sideways than vertically
+      grainClump: 0.1,              // video noise: mostly fine, per pixel
+      chromaNoise: 0.5,
+      chromaShift: 1.2, chromaBleed: 3.2,
       weave: 0, flicker: 0.006, corner: 0,
       leakRate: 0.05, scratchRate: 0.3, dustRate: 1.5,
     },
@@ -40,6 +47,8 @@ export const PROFILES = {
       knee: 0.55, shoulder: 0.3,
       contrast: 0.3,
       halation: 0.14,
+      halationColor: [1.0, 0.82, 0.7],
+      softV: 1,
       grainClump: 0.7,              // film grain: clumpy, organic
       chromaNoise: 0.15,
       chromaShift: 0, chromaBleed: 0,
@@ -60,6 +69,8 @@ export const PROFILES = {
       knee: 0.68, shoulder: 0.2,
       contrast: 0.08,
       halation: 0.04,
+      halationColor: [1.0, 0.95, 0.9],
+      softV: 0.5,
       grainClump: 0.05,
       chromaNoise: 0.8,
       chromaShift: 2.4, chromaBleed: 4.5,  // smeared, misregistered colour
@@ -85,7 +96,7 @@ export function toUniforms(id, adjust) {
   const soft = a.softness / 100;
   return {
     fps: p.fps,
-    wb: [1 + 0.1 * w, 1 + 0.015 * w, 1 - 0.14 * w],  // tiny white-balance shift, not an overlay
+    wb: [1 + 0.1 * w, 1 + 0.015 * w, 1 - 0.14 * w],  // white-balance shift; negative warmth = cooler
     saturation: a.saturation / 100,
     contrast: b.contrast,
     knee: b.knee,
@@ -95,7 +106,9 @@ export function toUniforms(id, adjust) {
     softRadius: 0.6 + soft * 4,
     softMix: Math.min(1, soft * 2.5),
     halation: b.halation,
+    halationColor: b.halationColor,
     halationRadius: 7,
+    softV: b.softV,
     grain: (a.grain / 100) * 0.12,
     grainClump: b.grainClump,
     grainSize: 1.6,

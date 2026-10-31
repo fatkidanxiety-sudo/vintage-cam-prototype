@@ -12,7 +12,7 @@ export function schema(support) {
   return [
     { title: 'Film', items: [
       { path: 'profile', type: 'segment', options: PROFILE_ORDER.map((id) => [id, PROFILES[id].name]) },
-      { path: 'adj.warmth', type: 'range', label: 'Warmth', min: 0, max: 100 },
+      { path: 'adj.warmth', type: 'range', label: 'Warmth (− cool, + warm)', min: -100, max: 100 },
       { path: 'adj.grain', type: 'range', label: 'Grain', min: 0, max: 100 },
       { path: 'adj.saturation', type: 'range', label: 'Saturation', min: 0, max: 150, unit: '%' },
       { path: 'adj.softness', type: 'range', label: 'Softness', min: 0, max: 100 },

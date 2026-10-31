@@ -12,7 +12,7 @@ web app (no build step, no dependencies, no server code, no analytics).
 
 | Profile | Character | Defaults |
 | --- | --- | --- |
-| Home Movie (default) | 1980s camcorder: natural colour, fine video noise, slight chroma bleed | warmth 8, grain 22, saturation 88%, softness 12, vignette 14, tracking 3, leaks off, scratches off |
+| Home Movie (default) | matched to real 1980s camcorder footage: cool lavender whites, lifted blue-grey shadows, low tape resolution, cool bloom, colour bleed | warmth −50, grain 20, saturation 98%, softness 68, vignette 10, tracking 5, leaks off, scratches off |
 | Super 8 | 1970s film: clumpy grain, gate weave, flicker, rounded gate, occasional leaks/scratches | warmth 16, grain 40, saturation 84%, softness 24, vignette 32 |
 | VHS | late-80s tape: smeared, misregistered colour, tracking wobble, head-switching noise | warmth 4, grain 30, saturation 80%, softness 36, tracking 22 |
 

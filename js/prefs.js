@@ -1,6 +1,6 @@
 // User preferences, saved on the phone (localStorage).
 
-import { DEFAULT_PROFILE, PROFILE_ORDER, defaultAdjust } from './looks.js';
+import { DEFAULT_PROFILE, PROFILE_ORDER, LOOKS_VERSION, defaultAdjust } from './looks.js';
 import { STAMP_DEFAULTS } from './overlay.js';
 
 const KEY = 'prefs-v2';
@@ -17,6 +17,7 @@ export function defaultPrefs() {
     aspect: '4:3',
     videoFormat: 'auto',
     sounds: true,
+    looksVersion: LOOKS_VERSION,
   };
 }
 
@@ -33,7 +34,10 @@ export function loadPrefs() {
   const d = defaultPrefs();
   const saved = read(KEY) ?? {};
   const p = { ...d, ...saved, stamp: { ...d.stamp, ...saved.stamp }, film: { ...d.film } };
-  for (const id of PROFILE_ORDER) p.film[id] = { ...d.film[id], ...saved.film?.[id] };
+  // Profile defaults changed since these sliders were saved: start from the new defaults.
+  const keepFilm = saved.looksVersion === LOOKS_VERSION;
+  for (const id of PROFILE_ORDER) p.film[id] = { ...d.film[id], ...(keepFilm ? saved.film?.[id] : {}) };
+  p.looksVersion = LOOKS_VERSION;
   if (!PROFILE_ORDER.includes(p.profile)) p.profile = DEFAULT_PROFILE;
   // Carry over the two settings the first version stored.
   if (saved.stamp?.on === undefined && read('stampOn') !== undefined) p.stamp.on = !!read('stampOn');

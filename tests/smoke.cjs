@@ -155,15 +155,15 @@ async function record(page, seconds) {
     console.log(lines.join('\n'));
 
     const h = table.home;
-    check('Home Movie: white stays neutral near a corner (R−B shift ≤ 8)', warm(h.white) - warm(raw.white) <= 8, `raw ${raw.white} → ${h.white}`);
+    // Home Movie is matched to 1980s camcorder footage: cool (lavender/blue) whites and
+    // lifted blue-grey shadows, while sky, foliage and skin keep their natural hues.
     const hw = table.homeNoVignette.white;
-    check('Home Movie: white stays bright (≥ 230 with vignette off)', Math.min(...hw) >= 230, `raw ${raw.white} → ${hw}`);
-    check('Home Movie: mid grey stays neutral (R−B ≤ 8)', Math.abs(warm(h.mid_gray)) <= 8, `${h.mid_gray}`);
+    check('Home Movie: whites lean cool like the reference (B > R, no yellow)', h.white[2] > h.white[0] + 5 && warm(h.white) < 0, `raw ${raw.white} → ${h.white}`);
+    check('Home Movie: whites stay bright (≥ 200, the reference is ~172–198)', Math.min(...hw) >= 200, `${hw}`);
     check('Home Movie: sky stays blue', h.sky[2] > h.sky[0] + 40 && h.sky[2] > h.sky[1], `${raw.sky} → ${h.sky}`);
     check('Home Movie: foliage stays green', h.foliage[1] > h.foliage[0] && h.foliage[1] > h.foliage[2], `${raw.foliage} → ${h.foliage}`);
-    check('Home Movie: skin keeps natural order R>G>B and shift ≤ 10',
-      h.skin_light[0] > h.skin_light[1] && h.skin_light[1] > h.skin_light[2] && warm(h.skin_light) - warm(raw.skin_light) <= 10, `${raw.skin_light} → ${h.skin_light}`);
-    check('Home Movie: shadows lifted only slightly (black ≤ 26)', Math.max(...h.black) <= 26, `${raw.black} → ${h.black}`);
+    check('Home Movie: skin keeps natural order R>G>B', h.skin_light[0] > h.skin_light[1] && h.skin_light[1] > h.skin_light[2], `${raw.skin_light} → ${h.skin_light}`);
+    check('Home Movie: shadows lifted and bluish like the reference', Math.min(...h.black) >= 18 && h.black[2] >= h.black[0], `${raw.black} → ${h.black}`);
     for (const id of ['super8', 'vhs']) {
       check(`${id}: no strong yellow cast on white (R−B shift ≤ 18)`, warm(table[id].white) - warm(raw.white) <= 18, `${table[id].white}`);
       check(`${id}: sky still blue`, table[id].sky[2] > table[id].sky[0] + 25, `${table[id].sky}`);
@@ -296,7 +296,7 @@ async function record(page, seconds) {
     execFileSync('ffmpeg', ['-v', 'error', '-y', '-sseof', '-1', '-i', file, '-frames:v', '1', path.join(OUT, `7-video-frame-${fmt}.png`)]);
     // The blinking REC indicator sits in the top-left corner: the amount of bright red
     // there must rise and fall with the blink (scene content alone stays constant).
-    const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-vf', 'fps=4,crop=200:60:0:0', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-']);
+    const raw = execFileSync('ffmpeg', ['-v', 'error', '-i', file, '-vf', 'fps=4,crop=200:60:0:0', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 256 * 1024 * 1024 });
     const reds = [];
     for (let f = 0; f + 36000 <= raw.length; f += 36000) {
       let red = 0;

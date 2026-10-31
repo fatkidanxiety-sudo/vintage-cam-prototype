@@ -43,6 +43,8 @@ uniform vec3 uBlack;
 uniform vec3 uWhite;
 uniform float uSoftR;
 uniform float uSoftMix;
+uniform float uSoftV;
+uniform vec3 uHalationColor;
 uniform float uHalation;
 uniform float uHalationR;
 uniform float uGrain;
@@ -106,12 +108,15 @@ void main() {
     q.x += uTracking * (0.003 * wob + 0.02 * band * tear + 0.05 * hs * (tear + 0.3));
   }
 
-  // Optics: soft lens.
+  // Optics and tape resolution: a wide horizontal blur plus a shorter vertical one.
   vec3 c = src(q);
   if (uSoftMix > 0.0) {
-    vec2 s = uSrcPx * uSoftR;
-    vec3 blur = (src(q + vec2(s.x, s.y)) + src(q + vec2(-s.x, s.y)) + src(q + vec2(s.x, -s.y)) + src(q + vec2(-s.x, -s.y))) * 0.25;
-    c = mix(c, blur, uSoftMix * 0.7);
+    vec2 s = uSrcPx * uSoftR * vec2(1.0, uSoftV);
+    vec3 blur = c * 0.3
+      + (src(q + vec2(s.x, 0.0)) + src(q - vec2(s.x, 0.0))) * 0.2
+      + (src(q + vec2(2.0 * s.x, 0.0)) + src(q - vec2(2.0 * s.x, 0.0))) * 0.08
+      + (src(q + vec2(0.0, s.y)) + src(q - vec2(0.0, s.y))) * 0.07;
+    c = mix(c, blur, uSoftMix);
   }
 
   // Video chroma: colour carried at lower resolution and slightly misregistered.
@@ -127,7 +132,7 @@ void main() {
     vec2 h = uSrcPx * uHalationR;
     vec3 g = src(q + vec2(h.x, 0.0)) + src(q - vec2(h.x, 0.0)) + src(q + vec2(0.0, h.y)) + src(q - vec2(0.0, h.y));
     float glow = max(dot(g * 0.25, LUMA) - 0.7, 0.0) / 0.3;
-    c += vec3(1.0, 0.82, 0.7) * glow * uHalation;
+    c += uHalationColor * glow * uHalation;
   }
 
   // Grade: tiny white-balance shift, soft highlight roll-off, saturation, gentle
@@ -475,7 +480,9 @@ export class FilmRenderer {
     gl.uniform3fv(l.uBlack, u.black);
     gl.uniform3fv(l.uWhite, u.white);
     gl.uniform1f(l.uSoftR, u.softRadius);
-    gl.uniform1f(l.uSoftMix, this.lite ? 0 : u.softMix);
+    gl.uniform1f(l.uSoftMix, u.softMix);
+    gl.uniform1f(l.uSoftV, u.softV);
+    gl.uniform3fv(l.uHalationColor, u.halationColor);
     gl.uniform1f(l.uHalation, this.lite ? 0 : u.halation);
     gl.uniform1f(l.uHalationR, u.halationRadius);
     gl.uniform1f(l.uGrain, u.grain);
