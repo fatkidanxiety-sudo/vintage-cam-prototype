@@ -8,7 +8,7 @@ import { sound } from './sound.js';
 import { loadPrefs, savePrefs } from './prefs.js';
 import { buildSettings } from './settings.js';
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 const MAX_LONG = { 720: 1280, 1080: 1920, '4k': 2880 };
 const MAX_RECORD_SECONDS = 15 * 60;
 const MIN_FREE_BYTES = 80e6;
@@ -19,7 +19,7 @@ const els = {
   compareTag: $('compareTag'), recTimer: $('recTimer'), quick: $('quick'), quickOpen: $('quickOpen'), quickSave: $('quickSave'),
   overlay: $('overlay'), overlayTitle: $('overlayTitle'), overlayText: $('overlayText'), overlayBtn: $('overlayBtn'),
   powerLamp: $('powerLamp'), recLamp: $('recLamp'), lcdProfile: $('lcdProfile'), lcdMode: $('lcdMode'),
-  stampToggle: $('stampToggle'), modeButtons: [...document.querySelectorAll('.mode [data-mode]')], menuBtn: $('menuBtn'),
+  stampToggle: $('stampToggle'), lightToggle: $('lightToggle'), modeButtons: [...document.querySelectorAll('.mode [data-mode]')], menuBtn: $('menuBtn'),
   shutter: $('shutter'), flip: $('flip'), thumb: $('thumb'), thumbCount: $('thumbCount'), toast: $('toast'),
   review: $('review'), reviewImg: $('reviewImg'), reviewVideo: $('reviewVideo'), reviewMeta: $('reviewMeta'),
   reviewStatus: $('reviewStatus'), reviewCount: $('reviewCount'), reviewClose: $('reviewClose'),
@@ -37,6 +37,7 @@ const state = {
   starting: false,
   busy: false,
   comparing: false,
+  light: false,
   recording: null,
   recTimer: 0,
   wakeLock: null,
@@ -153,6 +154,7 @@ async function startCamera() {
     lastFrame = 0;
     startLoop();
     if (prefs.mode === 'video') ensureMic();
+    applyLight(); // a new camera stream starts with its light off
   } catch (err) {
     camera.stop();
     stopLoop();
@@ -250,6 +252,39 @@ function toast(msg, ms = 3400) {
 }
 
 // ---------- Controls ----------
+
+// Video light: the back camera's LED stays on for recording and photos until switched
+// off. Starts off each launch to save battery. Turns off by itself when the camera
+// stops (app in the background).
+async function applyLight({ announce = false } = {}) {
+  const available = camera.running && camera.hasTorch;
+  els.lightToggle.classList.toggle('unavailable', camera.running && !available);
+  if (!available) {
+    if (state.light && camera.running) {
+      state.light = false;
+      toast(camera.facing === 'user'
+        ? 'The light only works with the back camera.'
+        : 'This browser doesn’t let web apps turn on the iPhone light.', 4500);
+    }
+    els.lightToggle.setAttribute('aria-checked', 'false');
+    return;
+  }
+  try {
+    await camera.setTorch(state.light);
+    if (announce) toast(state.light ? 'Light on' : 'Light off', 1200);
+  } catch (err) {
+    state.light = false;
+    toast(`Couldn’t switch the light (${err.name || err.message}).`, 4500);
+  }
+  els.lightToggle.setAttribute('aria-checked', String(state.light));
+}
+
+els.lightToggle.addEventListener('click', () => {
+  sound.play('key');
+  if (!camera.running) return toast('Turn the camera on first.', 2000);
+  state.light = !state.light;
+  applyLight({ announce: true });
+});
 
 function updateStampToggle() {
   els.stampToggle.setAttribute('aria-checked', String(prefs.stamp.on));

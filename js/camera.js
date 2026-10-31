@@ -100,6 +100,22 @@ export class Camera {
     await waitForVideo(this.video);
   }
 
+  // The back camera's LED, via the torch constraint. Only offered when the browser
+  // reports it for this camera (never for the front camera).
+  get hasTorch() {
+    try {
+      return !!this.track?.getCapabilities?.().torch;
+    } catch {
+      return false;
+    }
+  }
+
+  async setTorch(on) {
+    if (!this.hasTorch) return false;
+    await this.track.applyConstraints({ advanced: [{ torch: on }] });
+    return true;
+  }
+
   stop() {
     this.abort?.abort();
     this.abort = null;

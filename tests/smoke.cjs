@@ -350,6 +350,60 @@ async function record(page, seconds) {
     await ctx.close();
   }
 
+  // ---------- 4c. Video light (torch) ----------
+  {
+    const { ctx, page } = await open();
+    await ready(page);
+    await page.click('#lightToggle');
+    await page.waitForFunction(() => /doesn’t let web apps|only works with the back camera/.test(document.querySelector('#toast').textContent), null, { timeout: 3000 });
+    check('light: explains clearly when the camera has no light', (await page.getAttribute('#lightToggle', 'aria-checked')) === 'false');
+    await ctx.close();
+  }
+  {
+    const stub = () => {
+      window.__torch = [];
+      const caps = MediaStreamTrack.prototype.getCapabilities;
+      MediaStreamTrack.prototype.getCapabilities = function () {
+        const c = caps ? caps.call(this) : {};
+        return this.kind === 'video' ? { ...c, torch: true } : c;
+      };
+      MediaStreamTrack.prototype.applyConstraints = function (c) {
+        if (c?.advanced?.[0] && 'torch' in c.advanced[0]) window.__torch.push(c.advanced[0].torch);
+        return Promise.resolve();
+      };
+    };
+    const { ctx, page, errors } = await open({ prefs: { quality: '720', videoFormat: 'webm' }, init: stub });
+    await ready(page);
+    await page.click('#lightToggle');
+    await page.waitForFunction(() => window.__torch.at(-1) === true, null, { timeout: 3000 });
+    check('light: switch turns the back-camera light on', (await page.getAttribute('#lightToggle', 'aria-checked')) === 'true');
+    await page.click('#shutter');
+    await page.waitForFunction(() => window.__cam.state.captures.length === 1, null, { timeout: 10000 });
+    check('light: stays on while taking a photo', (await page.evaluate(() => window.__torch.at(-1))) === true);
+    await page.click('.mode [data-mode="video"]');
+    await page.waitForFunction(() => !!window.__cam.mic.track, null, { timeout: 10000 });
+    await record(page, 1.5);
+    await page.click('#lightToggle');
+    await page.waitForFunction(() => window.__torch.at(-1) === false, null, { timeout: 3000 });
+    await page.click('#lightToggle');
+    await page.waitForFunction(() => window.__torch.at(-1) === true, null, { timeout: 3000 });
+    check('light: can be switched while recording', !!(await page.evaluate(() => window.__cam.state.recording)));
+    await page.click('#shutter');
+    await page.waitForFunction(() => !window.__cam.state.recording, null, { timeout: 15000 });
+    const before = await page.evaluate(() => window.__torch.length);
+    await page.evaluate(() => {
+      for (const h of [true, false]) {
+        Object.defineProperty(document, 'visibilityState', { value: h ? 'hidden' : 'visible', configurable: true });
+        Object.defineProperty(document, 'hidden', { value: h, configurable: true });
+        document.dispatchEvent(new Event('visibilitychange'));
+      }
+    });
+    await page.waitForFunction((n) => window.__cam.camera.running && window.__torch.length > n && window.__torch.at(-1) === true, before, { timeout: 10000 });
+    check('light: comes back on after returning to the app', true);
+    check('no page errors (light)', errors.length === 0, errors.join(' | '));
+    await ctx.close();
+  }
+
   // ---------- 5. App killed mid-recording: recovered on next launch ----------
   {
     const { ctx, page } = await open({ prefs: { quality: '720', mode: 'video', videoFormat: 'webm' } });
